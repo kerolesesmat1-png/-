@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f7a4f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="حضور">
+<title>حضور وانصراف</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one narrow column like a small desk tool. Clock, name, two big buttons, sheet status, today's log, month table. */
+:root {
+  color-scheme: light dark;
+  --bg: #f3f5f4; --surface: #ffffff; --fg: #14201b; --muted: #5f6f68; --line: #dbe2de;
+  --in: #0f7a4f; --in-soft: #dff3e9; --out: #b4441f; --out-soft: #fbe6dc;
+  --warn: #8a5a00; --warn-soft: #fff1cf; --focus: #1d5fd1;
+  --font: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1613; --surface: #17211c; --fg: #e8efeb; --muted: #94a69d; --line: #2a3832;
+    --in: #3fc386; --in-soft: #153325; --out: #f08a5d; --out-soft: #3a2218;
+    --warn: #f0c46a; --warn-soft: #3a2f12; --focus: #7aa7ff;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.6; padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(48px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); -webkit-text-size-adjust: 100%; }
+main { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.head { text-align: center; }
+.date { color: var(--muted); font-size: 15px; }
+.clock { font-size: 56px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; direction: ltr; letter-spacing: 1px; }
+.clock small { font-size: 22px; font-weight: 500; color: var(--muted); margin-inline-start: 6px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+label { font-size: 14px; color: var(--muted); font-weight: 500; }
+input[type="text"] { font: inherit; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); width: 100%; }
+input[type="text"].bad { border-color: var(--out); }
+.err { color: var(--out); font-size: 14px; min-height: 22px; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 112px; border-radius: 16px; text-decoration: none; font-weight: 700; font-size: 28px; color: #fff; border: 0; cursor: pointer; font-family: inherit; }
+.btn span { font-size: 13px; font-weight: 500; opacity: .9; }
+.btn.in { background: var(--in); } .btn.out { background: var(--out); }
+.btn:active { transform: translateY(1px); }
+.btn { min-height: 128px; -webkit-tap-highlight-color: transparent; }
+button, .tools a { min-height: 40px; }
+@media (prefers-color-scheme: dark) { .btn { color: #0b120f; } }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.hint { font-size: 14px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 0; }
+.status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+.status.ok { border-color: var(--in); }
+.status.bad { border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+.status .grow { flex: 1 1 200px; min-width: 0; }
+.status button, .status a, .setup button { font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; text-decoration: none; }
+.setup { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.setup h2 { margin: 0; font-size: 17px; }
+.setup ol { margin: 0; padding-inline-start: 22px; color: var(--muted); font-size: 14px; }
+.setup input { direction: ltr; text-align: left; }
+.setup .row2 { display: flex; gap: 8px; align-items: center; }
+.logwrap h2, .month h2 { font-size: 17px; margin: 0 0 10px; }
+.rows { display: flex; flex-direction: column; gap: 8px; }
+.row { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tag { font-size: 13px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+.tag.in { background: var(--in-soft); color: var(--in); } .tag.out { background: var(--out-soft); color: var(--out); }
+.tag.sheet { background: transparent; border: 1px solid var(--line); color: var(--muted); font-weight: 500; }
+.tag.wait { background: var(--warn-soft); color: var(--warn); font-weight: 500; }
+.time { font-weight: 600; font-variant-numeric: tabular-nums; direction: ltr; }
+.tools { margin-inline-start: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.tools a, .tools button { font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; text-decoration: none; }
+.empty { color: var(--muted); text-align: center; padding: 20px; border: 1px dashed var(--line); border-radius: 12px; }
+.month .sum { color: var(--muted); font-size: 14px; margin: -6px 0 10px; }
+.tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { padding: 9px 12px; text-align: start; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 13px; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; direction: ltr; text-align: right; }
+td.dim { color: var(--muted); }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <section class="head">
+    <div class="date" id="date"></div>
+    <div class="clock" id="clock">--:--<small></small></div>
+  </section>
+
+  <section class="field">
+    <label for="name">اسمك</label>
+    <input type="text" id="name" placeholder="مثال: كيرو" autocomplete="name">
+    <div class="err" id="err" role="alert"></div>
+  </section>
+
+  <section class="actions">
+    <a class="btn in" id="btn-in" href="#" target="_blank" rel="noopener">حضور<span>يسجّل في الشيت ويفتح واتساب</span></a>
+    <a class="btn out" id="btn-out" href="#" target="_blank" rel="noopener">انصراف<span>يسجّل في الشيت ويفتح واتساب</span></a>
+  </section>
+
+  <p class="hint">بعد الضغط يتسجل صف في الشيت ويفتح واتساب والرسالة جاهزة. اختار الجروب واضغط إرسال. واتساب مش بيسمح لأي تطبيق يبعت لوحده.</p>
+
+  <div class="status" id="status" role="status">
+    <span class="grow" id="status-text">بيتصل بالشيت...</span>
+    <button type="button" id="status-btn" hidden></button>
+    <button type="button" id="status-cfg">رابط الشيت</button>
+    <a href="https://docs.google.com/spreadsheets/d/1SsBL2p1oujn_yMjK29weoIRVlIGVdf-1ZzcQW_QHamo/edit" target="_blank" rel="noopener">افتح الشيت</a>
+  </div>
+
+  <section class="setup" id="setup" hidden>
+    <h2>ربط الشيت (مرة واحدة)</h2>
+    <ol>
+      <li>افتح الشيت واختار Extensions ثم Apps Script.</li>
+      <li>امسح أي كود موجود والصق محتوى ملف apps-script.gs وبعدين Save.</li>
+      <li>اضغط Deploy ثم New deployment واختار النوع Web app.</li>
+      <li>خلّي Execute as: Me و Who has access: Anyone ثم Deploy، ووافق على الصلاحيات.</li>
+      <li>انسخ Web app URL (بينتهي بـ /exec) والصقه هنا. لو عملته قبل كده للبرنامج على الكمبيوتر، استخدم نفس الرابط.</li>
+    </ol>
+    <input type="text" id="script-url" placeholder="https://script.google.com/macros/s/.../exec" aria-label="رابط Apps Script">
+    <div class="row2"><button type="button" id="save-url">حفظ</button><span class="err" id="setup-err" role="alert"></span></div>
+  </section>
+
+  <section class="logwrap">
+    <h2>سجل النهارده</h2>
+    <div class="rows" id="rows"></div>
+  </section>
+
+  <section class="month">
+    <h2 id="month-title">الشهر</h2>
+    <div class="sum" id="month-sum"></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>اليوم</th><th>حضور</th><th>انصراف</th><th>المدة</th></tr></thead>
+        <tbody id="month-body"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var TZ = 'Africa/Cairo';
+  var PENDKEY = 'attendance-pending-v2', NAMEKEY = 'attendance-name-v1';
+  var HDR = { 'X-Attendance': '1' };
+
+  function load(k, fb) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } }
+  function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+  var pending = load(PENDKEY, []);   // entries not confirmed in the sheet yet
+  var rows = [];                     // entries read from the sheet
+  var busy = {}, failed = {};
+  var configured = false;
+  var sheetState = { kind: 'idle', text: 'بيتصل بالشيت...', action: null };
+
+  var nameEl = document.getElementById('name');
+  var errEl = document.getElementById('err');
+  var rowsEl = document.getElementById('rows');
+  var setupEl = document.getElementById('setup');
+  var urlEl = document.getElementById('script-url');
+  var setupErr = document.getElementById('setup-err');
+  nameEl.value = load(NAMEKEY, '');
+
+  function fmtTime(d) { return new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: true }).format(d).replace('AM', 'ص').replace('PM', 'م'); }
+  function fmtDate(d) { return new Intl.DateTimeFormat('ar-EG-u-nu-latn', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(d); }
+  function fmtDayShort(d) { return new Intl.DateTimeFormat('ar-EG-u-nu-latn', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'numeric' }).format(d); }
+  function fmtDayFull(d) { return new Intl.DateTimeFormat('ar-EG-u-nu-latn', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' }).format(d); }
+  function fmtMonth(d) { return new Intl.DateTimeFormat('ar-EG-u-nu-latn', { timeZone: TZ, month: 'long', year: 'numeric' }).format(d); }
+  function dayKey(d) { return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(d); }
+  function norm(s) { return String(s || '').trim().toLowerCase(); }
+
+  function duration(ms) {
+    var m = Math.round(ms / 60000), h = Math.floor(m / 60), r = m % 60;
+    if (h === 0) return r + ' دقيقة';
+    return h + ' ساعة' + (r ? ' و ' + r + ' دقيقة' : '');
+  }
+
+  function tick() {
+    var now = new Date();
+    var t = fmtTime(now).split(' ');
+    document.getElementById('clock').innerHTML = t[0] + '<small>' + (t[1] || '') + '</small>';
+    document.getElementById('date').textContent = fmtDate(now);
+  }
+  tick(); setInterval(tick, 1000);
+
+  /* ---------- data helpers ---------- */
+  function allEntries() {
+    var map = {};
+    rows.concat(pending).forEach(function (e) { map[e.ts] = e; });
+    return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return a.ts - b.ts; });
+  }
+  function entriesFor(nm) { var n = norm(nm); return allEntries().filter(function (e) { return norm(e.name) === n; }); }
+  function isPending(e) {
+    return pending.some(function (p) { return p.ts === e.ts; }) && !rows.some(function (r) { return r.ts === e.ts; });
+  }
+  function typeLabel(t) { return t === 'in' ? 'حضور' : 'انصراف'; }
+
+  function buildMessage(e) {
+    var d = new Date(e.ts);
+    var lines = [(e.type === 'in' ? '✅ حضور' : '🏁 انصراف'), 'الاسم: ' + e.name, 'التاريخ: ' + fmtDate(d), 'الساعة: ' + fmtTime(d)];
+    if (e.type === 'out' && e.dur) lines.push('مدة الشغل: ' + e.dur);
+    return lines.join('\n');
+  }
+  function waLink(msg) { return 'https://wa.me/?text=' + encodeURIComponent(msg); }
+
+  function computeDur(nm, now) {
+    var k = dayKey(now);
+    var today = entriesFor(nm).filter(function (e) { return dayKey(new Date(e.ts)) === k; });
+    for (var i = today.length - 1; i >= 0; i--) {
+      if (today[i].type === 'out') return '';
+      if (today[i].type === 'in') return duration(now.getTime() - today[i].ts);
+    }
+    return '';
+  }
+
+  /* ---------- Apps Script (direct from the phone) ---------- */
+  var CFGKEY = 'attendance-script-url-v1';
+  var scriptUrl = '';
+  try { scriptUrl = localStorage.getItem(CFGKEY) || ''; } catch (e) {}
+  var PREFIX = 'https://script.google.com/macros/s/';
+
+  function apiErr(kind, status) { var e = new Error(kind); e.kind = kind; e.status = status; return e; }
+  async function call(method, body) {
+    if (!scriptUrl) throw apiErr('setup', 412);
+    var url = method === 'GET' ? scriptUrl + (scriptUrl.indexOf('?') > -1 ? '&' : '?') + 'action=list&_=' + Date.now() : scriptUrl;
+    var ctl = new AbortController(), t = setTimeout(function () { ctl.abort(); }, 30000);
+    var res;
+    try {
+      res = await fetch(url, method === 'GET'
+        ? { method: 'GET', redirect: 'follow', cache: 'no-store', signal: ctl.signal }
+        : { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body, signal: ctl.signal });
+    } catch (e) { clearTimeout(t); throw apiErr(navigator.onLine === false ? 'offline' : 'upstream'); }
+    clearTimeout(t);
+    if (!res.ok) throw apiErr('upstream', res.status);
+    try { return await res.json(); } catch (e) { throw apiErr('upstream', 502); }
+  }
+  function errText(err) {
+    var k = err && err.kind;
+    if (k === 'setup') return 'لسه ما ربطتش الشيت. اتبع الخطوات تحت والصق الرابط.';
+    if (k === 'offline') return 'مفيش إنترنت. التسجيلات هتفضل معلّقة لحد ما ترجع النت وتضغط "سجّله في الشيت".';
+    return 'الشيت مش بيرد أو الرابط غلط. اتأكد إن النشر Anyone وجرب تاني.';
+  }
+
+  function parseRows(payload) {
+    var vals = (payload && payload.values) || [];
+    var out = [];
+    vals.forEach(function (r) {
+      var ts = Number(r[5]);
+      if (!isFinite(ts) || ts <= 0) return;
+      out.push({ ts: ts, type: r[2] === 'حضور' ? 'in' : 'out', name: String(r[1] || ''), dur: String(r[4] || '') });
+    });
+    return out;
+  }
+
+  async function readRows() {
+    return parseRows(await call('GET'));
+  }
+
+  function reconcile() {
+    var before = pending.length;
+    pending = pending.filter(function (p) { return !rows.some(function (r) { return r.ts === p.ts; }); });
+    if (pending.length !== before) save(PENDKEY, pending);
+  }
+
+  async function refresh() {
+    if (!configured) { sheetState = { kind: 'bad', text: errText({ kind: 'setup' }), action: null }; render(); return; }
+    sheetState = { kind: 'idle', text: 'بيحدّث من الشيت...', action: null };
+    renderStatus();
+    try {
+      rows = await readRows();
+      reconcile();
+      var n = pending.length;
+      sheetState = n
+        ? { kind: 'bad', text: 'متوصل بالشيت. فيه ' + n + ' تسجيل لسه ما اتكتبش فيه.', action: null }
+        : { kind: 'ok', text: 'متوصل بالشيت. آخر تحديث ' + fmtTime(new Date()) + '.', action: { label: 'تحديث', fn: refresh } };
+    } catch (err) {
+      if (err.kind === 'setup') { configured = false; setupEl.hidden = false; }
+      sheetState = { kind: 'bad', text: errText(err), action: err.kind === 'upstream' ? { label: 'حاول تاني', fn: refresh } : null };
+    }
+    render();
+  }
+
+  async function pushEntry(e) {
+    busy[e.ts] = true; delete failed[e.ts]; render();
+    var ok = false;
+    try {
+      var d = new Date(e.ts);
+      var j = await call('POST', JSON.stringify({ values: [[fmtDayFull(d), e.name, typeLabel(e.type), fmtTime(d), e.dur || '', e.ts]] }));
+      if (!j || j.ok !== true) throw apiErr('upstream', 502);
+      ok = true;
+      pending = pending.filter(function (p) { return p.ts !== e.ts; });
+      save(PENDKEY, pending);
+      rows.push(e);
+    } catch (err) {
+      failed[e.ts] = err;
+      if (err.kind === 'setup') { configured = false; setupEl.hidden = false; }
+      sheetState = { kind: 'bad', text: errText(err), action: null };
+    }
+    busy[e.ts] = false;
+    render();
+    if (ok) refresh();
+  }
+
+  async function retryEntry(e) {
+    busy[e.ts] = true; render();
+    try {
+      rows = await readRows();            // check first: the earlier write may have gone through
+      busy[e.ts] = false;
+      if (rows.some(function (r) { return r.ts === e.ts; })) { reconcile(); delete failed[e.ts]; render(); return; }
+    } catch (err) {
+      busy[e.ts] = false; failed[e.ts] = err;
+      sheetState = { kind: 'bad', text: errText(err), action: null };
+      render(); return;
+    }
+    pushEntry(e);
+  }
+
+  /* ---------- actions ---------- */
+  function hook(id, type) {
+    var a = document.getElementById(id);
+    a.addEventListener('click', function (ev) {
+      var nm = nameEl.value.trim();
+      if (!nm) {
+        ev.preventDefault();
+        nameEl.classList.add('bad');
+        errEl.textContent = 'اكتب اسمك الأول عشان يظهر في الشيت والرسالة.';
+        nameEl.focus();
+        return;
+      }
+      nameEl.classList.remove('bad'); errEl.textContent = '';
+      var now = new Date();
+      var e = { ts: now.getTime(), type: type, name: nm, dur: type === 'out' ? computeDur(nm, now) : '' };
+      a.href = waLink(buildMessage(e));
+      save(NAMEKEY, nm);
+      pending.push(e); save(PENDKEY, pending);
+      render();
+      pushEntry(e);
+    });
+  }
+  hook('btn-in', 'in'); hook('btn-out', 'out');
+
+  nameEl.addEventListener('input', function () {
+    nameEl.classList.remove('bad'); errEl.textContent = '';
+    save(NAMEKEY, nameEl.value.trim());
+    render();
+  });
+
+  document.getElementById('status-cfg').addEventListener('click', function () { setupEl.hidden = !setupEl.hidden; });
+  document.getElementById('save-url').addEventListener('click', function () {
+    setupErr.textContent = '';
+    var u = urlEl.value.trim();
+    if (u.indexOf(PREFIX) !== 0 || u.slice(-5) !== '/exec') { setupErr.textContent = 'الرابط لازم يبدأ بـ ' + PREFIX + ' وينتهي بـ /exec'; return; }
+    scriptUrl = u;
+    try { localStorage.setItem(CFGKEY, u); } catch (e) {}
+    configured = true; setupEl.hidden = true; urlEl.value = '';
+    refresh();
+  });
+
+  function copyText(text, btn) {
+    function done() { var o = btn.textContent; btn.textContent = 'اتنسخت'; setTimeout(function () { btn.textContent = o; }, 1500); }
+    function fallback() {
+      var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {} document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+  }
+
+  /* ---------- rendering ---------- */
+  function cell(text, cls) { var td = document.createElement('td'); td.textContent = text; if (cls) td.className = cls; return td; }
+  function el(tag, cls, text) { var x = document.createElement(tag); if (cls) x.className = cls; if (text != null) x.textContent = text; return x; }
+
+  function renderStatus() {
+    var box = document.getElementById('status'), txt = document.getElementById('status-text'), btn = document.getElementById('status-btn');
+    box.className = 'status' + (sheetState.kind === 'ok' ? ' ok' : sheetState.kind === 'bad' ? ' bad' : '');
+    txt.textContent = sheetState.text;
+    if (sheetState.action) { btn.hidden = false; btn.textContent = sheetState.action.label; btn.onclick = sheetState.action.fn; }
+    else { btn.hidden = true; btn.onclick = null; }
+  }
+
+  function renderToday() {
+    rowsEl.innerHTML = '';
+    var nm = nameEl.value.trim();
+    if (!nm) { rowsEl.appendChild(el('div', 'empty', 'اكتب اسمك فوق عشان أعرض سجلك.')); return; }
+    var k = dayKey(new Date());
+    var list = entriesFor(nm).filter(function (e) { return dayKey(new Date(e.ts)) === k; }).reverse();
+    if (!list.length) { rowsEl.appendChild(el('div', 'empty', 'لسه مفيش تسجيلات النهارده. اضغط حضور أول ما توصل.')); return; }
+    list.forEach(function (e) {
+      var row = el('div', 'row');
+      row.appendChild(el('span', 'tag ' + e.type, typeLabel(e.type)));
+      row.appendChild(el('span', 'time', fmtTime(new Date(e.ts))));
+      var wait = isPending(e);
+      if (busy[e.ts]) row.appendChild(el('span', 'tag wait', 'بيتسجل في الشيت...'));
+      else if (wait) row.appendChild(el('span', 'tag wait', 'لسه ما اتسجلش في الشيت'));
+      else row.appendChild(el('span', 'tag sheet', 'في الشيت'));
+      var tools = el('span', 'tools');
+      if (wait && !busy[e.ts]) {
+        var rb = el('button', null, 'سجّله في الشيت'); rb.type = 'button';
+        rb.addEventListener('click', function () { retryEntry(e); });
+        tools.appendChild(rb);
+      }
+      var again = el('a', null, 'إعادة إرسال'); again.href = waLink(buildMessage(e)); again.target = '_blank'; again.rel = 'noopener';
+      var cp = el('button', null, 'نسخ'); cp.type = 'button';
+      cp.addEventListener('click', function () { copyText(buildMessage(e), cp); });
+      tools.appendChild(again); tools.appendChild(cp);
+      row.appendChild(tools);
+      rowsEl.appendChild(row);
+    });
+  }
+
+  function renderMonth() {
+    var now = new Date(), monthKey = dayKey(now).slice(0, 7);
+    document.getElementById('month-title').textContent = 'شهر ' + fmtMonth(now);
+    var body = document.getElementById('month-body'), sum = document.getElementById('month-sum');
+    body.innerHTML = '';
+    var nm = nameEl.value.trim();
+    function emptyRow(msg) { var tr = document.createElement('tr'), td = cell(msg, 'dim'); td.colSpan = 4; tr.appendChild(td); body.appendChild(tr); }
+    if (!nm) { sum.textContent = ''; emptyRow('اكتب اسمك عشان يظهر جدول الشهر.'); return; }
+    var days = {}, order = [];
+    entriesFor(nm).forEach(function (e) {
+      var k = dayKey(new Date(e.ts));
+      if (k.slice(0, 7) !== monthKey) return;
+      if (!days[k]) { days[k] = []; order.push(k); }
+      days[k].push(e);
+    });
+    order.sort();
+    var total = 0, worked = 0;
+    order.forEach(function (k) {
+      var list = days[k], firstIn = null, lastOut = null;
+      list.forEach(function (e) {
+        if (e.type === 'in' && !firstIn) firstIn = e;
+        if (e.type === 'out') lastOut = e;
+      });
+      var tr = document.createElement('tr');
+      tr.appendChild(cell(fmtDayShort(new Date(list[0].ts))));
+      tr.appendChild(cell(firstIn ? fmtTime(new Date(firstIn.ts)) : '-', 'num' + (firstIn ? '' : ' dim')));
+      tr.appendChild(cell(lastOut ? fmtTime(new Date(lastOut.ts)) : '-', 'num' + (lastOut ? '' : ' dim')));
+      var dur = '-';
+      if (firstIn && lastOut && lastOut.ts > firstIn.ts) { var ms = lastOut.ts - firstIn.ts; dur = duration(ms); total += ms; worked++; }
+      tr.appendChild(cell(dur, dur === '-' ? 'dim' : ''));
+      body.appendChild(tr);
+    });
+    if (!order.length) { sum.textContent = ''; emptyRow('لسه مفيش أيام متسجلة الشهر ده.'); }
+    else sum.textContent = order.length + ' يوم متسجل، ' + (worked ? 'إجمالي الساعات: ' + duration(total) : 'لسه مفيش يوم فيه حضور وانصراف');
+  }
+
+  function render() { renderStatus(); renderToday(); renderMonth(); }
+
+  window.addEventListener('online', function () { if (configured) refresh(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && configured) refresh(); });
+
+  configured = !!scriptUrl;
+  setupEl.hidden = configured;
+  render();
+  refresh();
+
+})();
+</script>
+</body>
+</html>
